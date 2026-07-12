@@ -31,6 +31,28 @@ Detta repo innehåller den tekniska planen som svar på SPEC v0.1.
    vårdnadshavardelning och högskole-läget flyttas ut ur MVP. Se docs/05.
 6. **SSO mot studiecoach.ai**: signerad engångstoken (HMAC, 5 min TTL) — **inte** delad users-tabell.
 
+## Kom igång (Fas 0)
+
+```bash
+cp .env.example .env   # fyll i DATABASE_URL, SESSION_SECRET (openssl rand -hex 32)
+npm install
+npm run db:migrate     # kör drizzle/0000_*.sql mot din DB
+npm run dev
+```
+
+Övriga script: `npm run typecheck`, `npm run lint`, `npm run test`,
+`npm run db:generate` (ny migration efter schemaändring), `npm run import:schools`.
+
+**Känd lucka:** `scripts/import_schools.ts` har en verifierad detalj-endpoint
+(`GET /v2/school-units/{kod}`) men det bulk-listande sök-API:et hos Skolverket
+kunde inte verifieras härifrån (nätverksspärr i den här utvecklingsmiljön).
+`mapSchoolUnit()` kastar avsiktligt tills fältnamnen är bekräftade mot
+[Swagger UI](https://api.skolverket.se/skolenhetsregistret/swagger-ui/index.html)
+— se filens header-kommentar. Gissa inte fältnamnen, det förgiftar kunskapsbasen.
+
 ## Status
 
-Version 0.1 — arkitekturleverans. Ingen applikationskod ännu.
+Fas 0 pågår: repo, Next.js 15 + Drizzle-schema (29 tabeller, migration
+genererad), auth (registrering/inloggning/session/åldersgrind), AI-lager
+(budgetvakt + pseudonymiseringsvakt), health-endpoint, CI. Se docs/05 för
+resten av fasplanen.

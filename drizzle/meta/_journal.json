@@ -1,0 +1,13 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1783864229746,
+      "tag": "0000_clean_next_avengers",
+      "breakpoints": true
+    }
+  ]
+}

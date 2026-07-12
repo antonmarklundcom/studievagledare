@@ -19,7 +19,6 @@ import {
   json,
   mysqlEnum,
   mysqlTable,
-  primaryKey,
   smallint,
   text,
   timestamp,

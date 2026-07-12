@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      # Dummy values so module-level env checks (db/client.ts, session.ts)
+      # don't throw during typecheck/build — no real DB/session is touched.
+      DATABASE_URL: "mysql://ci:ci@localhost:3306/ci"
+      SESSION_SECRET: "ci-only-secret-not-used-for-anything-real-00000"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+
+      - run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Typecheck
+        run: npm run typecheck
+
+      - name: Test
+        run: npm run test
+
+      - name: Build
+        run: npm run build
