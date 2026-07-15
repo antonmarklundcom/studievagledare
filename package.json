@@ -23,6 +23,7 @@
     "iron-session": "^8.0.0",
     "bcryptjs": "^2.4.3",
     "zod": "^3.23.0",
+    "zod-to-json-schema": "^3.25.2",
     "@anthropic-ai/sdk": "^0.32.0"
   },
   "devDependencies": {

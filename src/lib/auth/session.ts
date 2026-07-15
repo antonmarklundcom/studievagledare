@@ -8,6 +8,9 @@ export interface SessionData {
   role?: Role;
   // Hint only — every access decision is re-checked against the DB in
   // db/queries/*, never trusted from the cookie alone (see docs/01 §7).
+
+  /** Guest interview ownership token (docs/01 §4) — set once per guest, never for logged-in users. */
+  guestToken?: string;
 }
 
 function requireSessionSecret(): string {
