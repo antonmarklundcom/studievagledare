@@ -13,7 +13,6 @@ import {
 import { advancePhase, getCurrentPhase, recordTurn, shouldForceAdvance } from './engine';
 import { buildSystemPrompt } from './prompt';
 import { INTERVIEW_TOOLS, processTurn } from './tools';
-import type { EngineState } from './types';
 
 const INTERVIEW_MAX_OUTPUT_TOKENS = 1024;
 // Sliding window, not the full transcript — the profile JSON is the engine's
@@ -66,7 +65,7 @@ export async function takeInterviewTurn(input: {
     await appendMessage({ interviewId: input.interviewId, role: 'user', content: input.userMessage });
   }
 
-  const engineState = interview.engineState as EngineState;
+  const engineState = interview.engineState;
   const phase = getCurrentPhase(interview.mode, interview.variant, engineState);
   const profile = await getProfileDraft(input.interviewId);
   const history = await getMessages(input.interviewId, MESSAGE_WINDOW);

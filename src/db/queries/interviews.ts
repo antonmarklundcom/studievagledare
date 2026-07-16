@@ -14,6 +14,17 @@ export function hashGuestToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
 
+/**
+ * mysql2 auto-parses JSON columns to objects on real MySQL, but MariaDB
+ * (used for local dev — it stores JSON as TEXT under the hood) returns the
+ * raw string instead. Normalize explicitly rather than depend on which
+ * server happens to be underneath (found by actually running this, not by
+ * typechecking — see the interview engine round of Fas 1).
+ */
+function parseJsonColumn<T>(value: unknown): T {
+  return (typeof value === 'string' ? JSON.parse(value) : value) as T;
+}
+
 export async function createInterview(input: {
   userId?: number | null;
   guestToken?: string | null;
@@ -46,7 +57,8 @@ export async function createInterview(input: {
 
 export async function getInterviewById(id: number) {
   const [interview] = await db.select().from(interviews).where(eq(interviews.id, id)).limit(1);
-  return interview ?? null;
+  if (!interview) return null;
+  return { ...interview, engineState: parseJsonColumn<EngineState>(interview.engineState!) };
 }
 
 export async function findInterviewByGuestToken(token: string) {
@@ -55,7 +67,8 @@ export async function findInterviewByGuestToken(token: string) {
     .from(interviews)
     .where(eq(interviews.guestTokenHash, hashGuestToken(token)))
     .limit(1);
-  return interview ?? null;
+  if (!interview) return null;
+  return { ...interview, engineState: parseJsonColumn<EngineState>(interview.engineState!) };
 }
 
 export async function appendMessage(input: {
@@ -120,7 +133,7 @@ export async function getProfileDraft(interviewId: number): Promise<StudentProfi
     .where(eq(studentProfiles.interviewId, interviewId))
     .limit(1);
   if (!row) throw new Error(`No profile draft for interview ${interviewId}`);
-  return row.data as StudentProfile;
+  return parseJsonColumn<StudentProfile>(row.data);
 }
 
 export async function saveProfileDraft(interviewId: number, data: StudentProfile) {
