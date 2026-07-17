@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { claimGuestInterviewsForUser } from '@/db/queries/interviews';
 import { createUser, findUserByEmail, recordConsent } from '@/db/queries/users';
 import { hashPassword } from '@/lib/auth/password';
 import { getSession } from '@/lib/auth/session';
@@ -21,6 +22,10 @@ export async function POST(req: NextRequest) {
       { status: 403 },
     );
   }
+
+  // Read before we start mutating the session below (docs/01 §4 gäst→konto merge).
+  const session = await getSession();
+  const guestToken = session.guestToken;
 
   const existing = await findUserByEmail(email);
   if (existing) {
@@ -48,12 +53,17 @@ export async function POST(req: NextRequest) {
     policyVersion: 'v0.1',
   });
 
-  const session = await getSession();
+  const claimedInterviewId = guestToken
+    ? await claimGuestInterviewsForUser(guestToken, user.id)
+    : null;
+
   session.userId = user.id;
   session.role = user.role;
+  delete session.guestToken;
   await session.save();
 
   return NextResponse.json({
     user: { id: user.id, email: user.email, role: user.role, displayName: user.displayName },
+    claimedInterviewId,
   });
 }

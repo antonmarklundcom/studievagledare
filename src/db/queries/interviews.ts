@@ -2,7 +2,7 @@ import crypto from 'node:crypto';
 import { desc, eq } from 'drizzle-orm';
 import { db } from '../client';
 import { parseJsonColumn } from '../json-column';
-import { interviewMessages, interviews, studentProfiles } from '../schema';
+import { interviewMessages, interviews, recommendations, studentProfiles } from '../schema';
 import { emptyProfile, type StudentProfile } from '@/lib/contracts/profile';
 import { initEngineState } from '@/lib/interview/engine';
 import type { EngineState, InterviewMode, InterviewVariant } from '@/lib/interview/types';
@@ -128,6 +128,30 @@ export async function getProfileDraft(interviewId: number): Promise<StudentProfi
 
 export async function saveProfileDraft(interviewId: number, data: StudentProfile) {
   await db.update(studentProfiles).set({ data }).where(eq(studentProfiles.interviewId, interviewId));
+}
+
+/**
+ * Gäst→konto merge (docs/01 §4): moves the guest interview + its profile +
+ * any generated recommendation to the newly registered user, and clears the
+ * guest token hash since ownership now goes through userId instead. Returns
+ * null (a no-op, not an error) if there's nothing to claim — most
+ * registrations aren't a guest converting mid-flow.
+ */
+export async function claimGuestInterviewsForUser(
+  guestToken: string,
+  userId: number,
+): Promise<number | null> {
+  const interview = await findInterviewByGuestToken(guestToken);
+  if (!interview || interview.userId !== null) return null;
+
+  await db
+    .update(interviews)
+    .set({ userId, guestTokenHash: null })
+    .where(eq(interviews.id, interview.id));
+  await db.update(studentProfiles).set({ userId }).where(eq(studentProfiles.interviewId, interview.id));
+  await db.update(recommendations).set({ userId }).where(eq(recommendations.interviewId, interview.id));
+
+  return interview.id;
 }
 
 export async function getProfileRecordId(interviewId: number): Promise<number> {

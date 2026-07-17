@@ -13,7 +13,8 @@
     "db:migrate": "tsx --env-file=.env scripts/migrate.ts",
     "db:studio": "drizzle-kit studio",
     "import:schools": "tsx --env-file=.env scripts/import_schools.ts",
-    "import:gy-programs": "tsx --env-file=.env scripts/import_gy_programs.ts"
+    "import:gy-programs": "tsx --env-file=.env scripts/import_gy_programs.ts",
+    "purge:guests": "tsx --env-file=.env scripts/purge_guests.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.32.0",

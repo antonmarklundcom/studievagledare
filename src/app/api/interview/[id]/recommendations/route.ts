@@ -4,6 +4,7 @@ import { getSession } from '@/lib/auth/session';
 import { BudgetExceededError } from '@/lib/ai/guard';
 import { ownsInterview } from '@/lib/interview/access';
 import { generateRecommendations, NoCandidatesError, NoValidSelectionsError } from '@/lib/recommend/generate';
+import { applyTeaserLock } from '@/lib/recommend/teaser';
 import { requestIpHash } from '@/lib/util/hash-ip';
 
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -33,8 +34,14 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
       userId: session.userId ?? null,
       ipHash: requestIpHash(req),
     });
+    if (!recommendation) {
+      return NextResponse.json({ error: 'Kunde inte hämta rekommendationen.' }, { status: 500 });
+    }
 
-    return NextResponse.json({ recommendation });
+    // Still a guest (never claimed via registration) — lock everything past #1.
+    const items = interview.userId === null ? applyTeaserLock(recommendation.items) : recommendation.items;
+
+    return NextResponse.json({ recommendation: { ...recommendation, items } });
   } catch (err) {
     if (err instanceof BudgetExceededError) {
       return NextResponse.json({ error: err.message }, { status: 429 });
