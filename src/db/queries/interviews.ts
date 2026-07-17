@@ -1,6 +1,7 @@
 import crypto from 'node:crypto';
 import { desc, eq } from 'drizzle-orm';
 import { db } from '../client';
+import { parseJsonColumn } from '../json-column';
 import { interviewMessages, interviews, studentProfiles } from '../schema';
 import { emptyProfile, type StudentProfile } from '@/lib/contracts/profile';
 import { initEngineState } from '@/lib/interview/engine';
@@ -12,17 +13,6 @@ export function generateGuestToken(): string {
 
 export function hashGuestToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
-}
-
-/**
- * mysql2 auto-parses JSON columns to objects on real MySQL, but MariaDB
- * (used for local dev — it stores JSON as TEXT under the hood) returns the
- * raw string instead. Normalize explicitly rather than depend on which
- * server happens to be underneath (found by actually running this, not by
- * typechecking — see the interview engine round of Fas 1).
- */
-function parseJsonColumn<T>(value: unknown): T {
-  return (typeof value === 'string' ? JSON.parse(value) : value) as T;
 }
 
 export async function createInterview(input: {
@@ -138,4 +128,14 @@ export async function getProfileDraft(interviewId: number): Promise<StudentProfi
 
 export async function saveProfileDraft(interviewId: number, data: StudentProfile) {
   await db.update(studentProfiles).set({ data }).where(eq(studentProfiles.interviewId, interviewId));
+}
+
+export async function getProfileRecordId(interviewId: number): Promise<number> {
+  const [row] = await db
+    .select({ id: studentProfiles.id })
+    .from(studentProfiles)
+    .where(eq(studentProfiles.interviewId, interviewId))
+    .limit(1);
+  if (!row) throw new Error(`No profile draft for interview ${interviewId}`);
+  return row.id;
 }

@@ -92,10 +92,16 @@ export default function IntervjuPage() {
         {status === 'loading' && (
           <p className="text-sm text-neutral-500">Kopplar upp intervjun...</p>
         )}
-        {status === 'completed' && (
-          <p className="text-sm text-neutral-500">
-            Intervjun är klar! (Resultatsidan byggs i nästa steg.)
-          </p>
+        {status === 'completed' && interviewId && (
+          <div className="space-y-2">
+            <p className="text-sm text-neutral-500">Intervjun är klar!</p>
+            <a
+              href={`/resultat/${interviewId}`}
+              className="inline-block rounded-full bg-neutral-900 px-4 py-2 text-sm font-medium text-white dark:bg-neutral-100 dark:text-neutral-900"
+            >
+              Se dina förslag
+            </a>
+          </div>
         )}
         {status === 'paused' && (
           <p className="text-sm text-neutral-500">Intervjun är pausad — försök igen senare.</p>

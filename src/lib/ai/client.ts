@@ -1,6 +1,6 @@
 import Anthropic from '@anthropic-ai/sdk';
 import { assertWithinBudget, logAiUsage } from './guard';
-import { mockReply } from './mock';
+import { mockReply, mockRecommendationSelections } from './mock';
 import { assertPseudonymous } from './pseudonymize';
 
 let client: Anthropic | null = null;
@@ -68,7 +68,6 @@ export async function callClaude(params: CallParams): Promise<AiCallResult> {
   );
 
   if (isMockMode()) {
-    const text = mockReply(params.messages.length);
     await logAiUsage({
       userId: params.userId,
       ipHash: params.ipHash,
@@ -77,6 +76,23 @@ export async function callClaude(params: CallParams): Promise<AiCallResult> {
       inputTokens: 0,
       outputTokens: 0,
     });
+
+    const recommendationTool = params.tools?.find((t) => t.name === 'submit_recommendations');
+    if (recommendationTool) {
+      return {
+        content: [
+          {
+            type: 'tool_use',
+            id: 'mock_tool_use_1',
+            name: 'submit_recommendations',
+            input: mockRecommendationSelections(5),
+          },
+        ],
+        usage: { input_tokens: 0, output_tokens: 0 },
+      };
+    }
+
+    const text = mockReply(params.messages.length);
     return {
       content: [{ type: 'text', text }],
       usage: { input_tokens: 0, output_tokens: 0 },

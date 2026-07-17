@@ -21,3 +21,21 @@ const GENERIC_REPLIES = [
 export function mockReply(turnIndex: number): string {
   return `[MOCK] ${GENERIC_REPLIES[turnIndex % GENERIC_REPLIES.length]}`;
 }
+
+/**
+ * When the caller passes the recommendation tool, the mock proposes the
+ * first few candidate indices with placeholder motivations instead of plain
+ * text — so the recommendation pipeline (persistence, facts_snapshot,
+ * results page) can be exercised for free too. Indices are clamped by the
+ * caller against the real candidate list either way (rank.ts), same as a
+ * real model's output would be.
+ */
+export function mockRecommendationSelections(count: number) {
+  const n = Math.min(Math.max(count, 1), 5);
+  return {
+    selections: Array.from({ length: n }, (_, i) => ({
+      index: i,
+      motivation: `[MOCK] Passar utifrån det du berättat i intervjun (plats ${i + 1}).`,
+    })),
+  };
+}
