@@ -38,24 +38,53 @@ huvudena hos byggmodellerna.
 
 ## 3. Nuläge: vad som finns vs. vad som saknas
 
-### Finns (arkitekturleverans, ingen applikationskod)
+> **Uppdaterad 2026-07-17 (Sonnet 5, byggsessioner på `claude/studievagledare-architecture-gl3xsp`).**
+> Sektionen nedan låg kvar i sitt ursprungsläge ("0 % av applikationen") trots att
+> Fas 0 och en del av Fas 1 redan var byggda på en gren som inte var synlig när denna
+> fil skrevs. Uppdaterar här så filen inte pekar fel för nästa session/granskning.
 
-- **docs/01–06**: komplett arkitektur (intervjumotor, retrieval, gäst-konvertering,
-  SSO-handoff, kostnadsvakter), datamodellmotivering, verifierad datakälls-audit,
-  GDPR-riskgenomgång, fasindelad byggplan, spec-granskning med de-scope-beslut.
-- **`src/db/schema.ts`**: komplett Drizzle/MySQL-schema (~30 tabeller) inkl.
-  Gy25-giltighetsperioder, consents-historik, `ai_usage`, `import_runs`, `handoff_tokens`.
+### Finns (arkitektur + kod, verifierat körande)
 
-### Saknas (= 100 % av applikationen)
+- **docs/01–06** + denna fil: arkitektur, datamodell, datakälls-audit, GDPR-genomgång,
+  byggplan, spec-granskning, portfölj-milstolpar.
+- **`src/db/schema.ts`**: komplett Drizzle/MySQL-schema (~30 tabeller), migrerat
+  (`drizzle/0000_*.sql` i repo, körd mot en riktig DB — inte bara genererad).
+- **Fas 0, helt klar**: Next.js 15 + TS + Tailwind-scaffold, Drizzle-klient, CI
+  (typecheck/lint/test/build grön), auth (iron-session + bcrypt, register/login/
+  logout, hård åldersgrind <13, `requireRole`-vakt som läser om rollen från DB),
+  `/api/health`, `lib/ai/` (Anthropic-klient bakom budgetvakt + `assertPseudonymous()`,
+  **plus en `AI_PROVIDER=mock`-väg för gratis lokal testning**, ej i ursprungsplanen
+  men värd att notera — se `src/lib/ai/mock.ts`).
+- **Fas 1, delvis klar**: intervjumotorns fasmaskin (`lib/interview/engine.ts`,
+  ren TS, 7 enhetstester) + gymnasieval-fasernas config (full + guest_short-variant),
+  profilkontraktet (`lib/contracts/profile.ts`, enum-kodade constraints/uncertainties
+  per docs/04 risk 1), tool-definitioner härledda från profilschemat, orkestrerings-
+  funktionen som binder ihop motor+profil+AI-anrop (`lib/interview/step.ts`), API-
+  routes (`/api/interview`, `/api/interview/[id]/message`), minimal chatt-UI. **Körd
+  end-to-end mot en riktig MySQL-kompatibel DB och screenshottad i webbläsare** — inte
+  bara typecheckad. En verklig bugg hittades och fixades under den körningen
+  (MariaDB serialiserar JSON-kolumner som text i stället för att auto-parsa dem;
+  löst med explicit parsning i `db/queries/interviews.ts` i stället för att lita på
+  drivrutinen).
+- `scripts/import_schools.ts` + `scripts/import_gy_programs.ts`: bas-URL:er
+  bekräftade mot Skolverkets egna sidor, men fältmappningen kastar medvetet tills
+  någon med riktig nätåtkomst till `api.skolverket.se` verifierar mot Swagger UI —
+  byggmiljön här är nätverksspärrad mot den värden.
 
-Ingen `package.json`, ingen Next.js-app, ingen CI, ingen deploy, ingen data i någon
-databas, inga prompts, inga tester. Dessutom saknas (icke-kod): pilotskola, DPIA,
-PUB-avtalsmall, Anthropic DPA-genomgång, licenskontroll av regionala antagningskanslier.
+### Saknas (resten av Fas 1 + allt därefter)
 
-**Gap-analysens slutsats:** planeringsrisken är redan nedarbetad — docs/05 är en
-trovärdig byggplan. Detta dokument omstrukturerar den till portfölj-standardens faser
-och lägger till modell-tiering + sessionsestimat. Vid konflikt i detaljfrågor gäller
-docs/01–06; vid konflikt om fas/scope gäller denna fil.
+Rekommendationsmotorn (kandidat-SQL → heuristik → LLM-rankning → snapshot),
+resultatvy + gap-analys, gästläges-teaser/konto-merge (motorn stödjer `guest_short`
+redan, men UI:t för låsta kort/konto-merge saknas), SYV-flöde/inbox/rapport,
+GDPR-export/raderingsflöden, prompt-eval-riggen, samt hela Fas 2–4 (SEO, dashboards,
+licenser, m.m.). Ingen data i katalogtabellerna ännu (`gy_programs` m.fl. är tomma —
+importscripten väntar på fältverifiering). Icke-kod: pilotskola, DPIA, PUB-avtalsmall,
+Anthropic DPA-genomgång, licenskontroll av regionala antagningskanslier — oförändrat.
+
+**Gap-analysens slutsats:** planeringsrisken var redan nedarbetad; nu är en del av
+genomföranderisken det också (intervjumotorn — den mest komplexa Fas 1-komponenten
+per modell-tieringen i §1 — är byggd och verifierad). Vid konflikt i detaljfrågor
+gäller docs/01–06; vid konflikt om fas/scope gäller denna fil.
 
 ---
 
@@ -67,6 +96,12 @@ Estimat i **byggsessioner** (en fokuserad Claude Code-session ≈ en halv–hel 
 
 Motsvarar docs/05 Fas 0. Klart när `npm run dev` fungerar, CI är grön, prod-URL:en
 svarar och kunskapsbasens grunddata ligger i DB.
+
+**Status: klar utom punkt 3 (Hostinger-deploy) och kunskapsbasens grunddata** —
+punkterna 1, 2, 4, 6 är byggda, testade och verifierade körande mot en riktig DB.
+Punkt 5 (import) är skriven men fältmappningen är overifierad (se §3).
+A4-riskerna (ISR/cron/fulltext/minne) är **inte** verifierade — kräver en riktig
+Hostinger-miljö, inte den här byggmiljön.
 
 1. Scaffold: Next.js 15 + TS + Tailwind + Drizzle, lint/format, CI (typecheck + test).
 2. Schema migrerat (drizzle-kit, migrations-SQL i repo — aldrig `db push` mot prod).
@@ -98,6 +133,17 @@ resan intervju → rekommendationer → delad SYV-rapport, och GDPR-minimum finn
 | Gästläge: kortintervju, teaser (#1 äkta, 2–5 låsta), konto-merge, 30-dagars purge | Sonnet 5 | docs/01 §4. |
 | SYV-flöde: elevens delning (consent), SYV-inbox, rapport som **webbvy** (print-CSS, ej PDF) | Sonnet 5 | B2B-kroken. Mående-flagga utan citat. |
 | GDPR-minimum: export (JSON), raderingstransaktionen (docs/04 §6), policy, retention-crons | Sonnet 5 | Raderingsordningen är exakt specad — följ den. |
+
+**Status:** fasmaskinen och LLM-loopen (rad 1–2) samt intervju-UI/API (rad 3) är
+byggda — **med Sonnet 5, inte Opus 4.8** som denna tabell föreslår. Avvikelsen
+noteras här öppet snarare än att tystas ner: byggsessionen körde löpande med
+Sonnet 5 utan att en Fable 5-grind hann köras emellan. Resultatet är verifierat
+(21 enhetstester, fullständig intervju körd mot riktig DB, chatt-UI screenshottat),
+så kvaliteten är inte obekräftad — men om `docs/01 §2`s svåraste antaganden
+(promptens hantering av mående-eskalering, tool-call-tillförlitlighet över många
+turer) ska stresstestas ordentligt är det fortfarande värt en Opus 4.8-genomgång
+innan pilot, inte för att bygga om utan för att granska det som redan finns.
+Rekommendationsmotorn (rad 4) är ännu inte byggd — nästa steg.
 | Prompt-eval-rigg: 10 syntetiska personas → assert profil fylls + rekommendationer refererar kandidater | **Opus 4.8** | docs/06 punkt 8. Körs vid varje promptändring. Prompts versioneras i repo. |
 
 **Grind (Fable 5):** M2-motsvarigheten — hela flödet med riktig persona, go/no-go på
